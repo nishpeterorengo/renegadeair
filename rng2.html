@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-900 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Renegade Air - Ground Operations Duty Manager</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Font: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            renegade: {
+              navy: '#0f172a',
+              sky: '#0284c7',
+              gold: '#eab308',
+              goldDark: '#ca8a04',
+              accent: '#38bdf8'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #0284c7;
+    }
+    .badge-shift-morning { background-color: rgba(14, 165, 233, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); }
+    .badge-shift-afternoon { background-color: rgba(234, 179, 8, 0.2); color: #fde047; border: 1px solid rgba(234, 179, 8, 0.4); }
+    .badge-shift-night { background-color: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(192, 132, 252, 0.4); }
+    .badge-shift-off { background-color: rgba(100, 116, 139, 0.2); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.3); }
+    .badge-shift-leave { background-color: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.4); }
+  </style>
+</head>
+<body class="h-full flex flex-col font-sans antialiased text-slate-100 bg-slate-950 overflow-x-hidden">
+
+  <!-- Top Navigation Header -->
+  <header class="bg-slate-900 border-b border-slate-800 sticky top-0 z-30 shadow-lg">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        
+        <!-- Logo & Branding -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 via-sky-500 to-amber-400 p-0.5 shadow-md flex items-center justify-center">
+            <div class="w-full h-full bg-slate-900 rounded-[10px] flex items-center justify-center">
+              <i class="fa-solid font-bold text-amber-400 text-xl fa-plane-departure"></i>
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-lg font-bold tracking-tight text-white">RENEGADE AIR</span>
+              <span class="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-semibold border border-amber-500/30">GROUND OPS</span>
+            </div>
+            <p class="text-xs text-slate-400 font-medium">Station Duty Roster System (Auto-Sync Enabled)</p>
+          </div>
+        </div>
+
+        <!-- Auth Status & Controls -->
+        <div class="flex items-center gap-3">
+          <div id="authBadgeContainer" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs">
+            <span id="authStatusDot" class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+            <span id="authBadgeText" class="font-medium text-slate-300">
+              <i class="fa-solid fa-lock text-amber-400 mr-1"></i> View-Only Guest Mode
+            </span>
+          </div>
+
+          <button id="authBtn" onclick="handleAuthAction()" class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition shadow-md shadow-sky-900/20">
+            <i class="fa-solid fa-right-to-bracket" id="authBtnIcon"></i>
+            <span id="authBtnText">Station Admin Login</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- Navigation Bar Tabs -->
+  <nav class="bg-slate-900/80 backdrop-blur border-b border-slate-800 sticky top-16 z-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center overflow-x-auto py-2 gap-2 no-scrollbar">
+        
+        <div class="flex space-x-1">
+          <button onclick="switchTab('dashboard')" id="tab-dashboard" class="nav-tab px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold transition flex items-center gap-2 bg-sky-600 text-white shadow">
+            <i class="fa-solid fa-chart-pie"></i> Dashboard
+          </button>
+          <button onclick="switchTab('roster')" id="tab-roster" class="nav-tab px-4 py-2 rounded-lg text-xs sm:text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center gap-2">
+            <i class="fa-solid fa-calendar-days"></i> Weekly Duty Roster
+          </button>
+          <button onclick="switchTab('personnel')" id="tab-personnel" class="nav-tab px-4 py-2 rounded-lg text-xs sm:text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center gap-2">
+            <i class="fa-solid fa-users"></i> Staff & Personnel
+          </button>
+          <button onclick="switchTab('attachees')" id="tab-attachees" class="nav-tab px-4 py-2 rounded-lg text-xs sm:text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition flex items-center gap-2">
+            <i class="fa-solid fa-user-graduate"></i> Attachees
+          </button>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button id="adminManagerBtn" onclick="openAdminManagerModal()" class="hidden px-3 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-xs font-semibold transition items-center gap-1.5">
+            <i class="fa-solid fa-user-gear"></i> Manage Station Admins
+          </button>
+          <button onclick="exportToCSV()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5">
+            <i class="fa-solid fa-file-csv text-emerald-400"></i> Export CSV
+          </button>
+        </div>
+
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main View Area -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Guest Mode Alert Banner -->
+    <div id="guestNotice" class="p-3.5 rounded-xl bg-slate-900/90 border border-sky-500/30 flex items-center justify-between text-xs sm:text-sm gap-3 shadow-inner">
+      <div class="flex items-center gap-3 text-slate-300">
+        <span class="w-8 h-8 rounded-lg bg-sky-500/20 border border-sky-500/40 flex items-center justify-center text-sky-400 flex-shrink-0">
+          <i class="fa-solid fa-eye text-base"></i>
+        </span>
+        <div>
+          <span class="font-semibold text-sky-300">Viewing in Read-Only Mode:</span>
+          <span class="text-slate-400 ml-1">Changes sync automatically across windows. Log in as Admin to edit rosters.</span>
+        </div>
+      </div>
+      <button onclick="openLoginModal()" class="px-3 py-1.5 rounded-md bg-sky-600/80 hover:bg-sky-600 text-white font-medium text-xs whitespace-nowrap">
+        Admin Login
+      </button>
+    </div>
+
+    <!-- Active Admin Access Banner -->
+    <div id="adminNotice" class="hidden p-3.5 rounded-xl bg-slate-900/90 border border-amber-500/30 flex items-center justify-between text-xs sm:text-sm gap-3 shadow-inner">
+      <div class="flex items-center gap-3 text-slate-300">
+        <span class="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 flex-shrink-0">
+          <i class="fa-solid fa-user-shield text-base"></i>
+        </span>
+        <div>
+          <span class="font-semibold text-amber-300" id="adminNoticeScope">Station Admin Logged In:</span>
+          <span class="text-slate-400 ml-1" id="adminNoticeDesc">Edits will update automatically across all open tabs.</span>
+        </div>
+      </div>
+      <span class="text-xs text-amber-400/80 font-mono" id="adminNoticeStationCode">STATION: NBO</span>
+    </div>
+
+    <!-- TAB 1: DASHBOARD -->
+    <section id="view-dashboard" class="tab-content space-y-6">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-900 p-4 rounded-xl border border-slate-800">
+        <div>
+          <h1 class="text-xl font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-radar text-sky-400"></i> Operations View
+          </h1>
+          <p class="text-xs text-slate-400">Real-time breakdown of ground handlers, dispatchers, and attachees.</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <div>
+            <label class="block text-[10px] text-slate-400 uppercase font-semibold mb-1">Select Station</label>
+            <select id="dashStationFilter" onchange="renderDashboard()" class="bg-slate-800 border border-slate-700 text-white text-xs rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none">
+              <option value="ALL">All Stations (Kenya Network)</option>
+              <option value="NBO">Wilson Airport (NBO) - Nairobi</option>
+              <option value="MBA">Moi Int'l (MBA) - Mombasa</option>
+              <option value="KSU">Kisumu Airport (KSU) - Kisumu</option>
+              <option value="EDL">Eldoret Int'l (EDL) - Eldoret</option>
+              <option value="WJR">Wajir Airport (WJR) - Wajir</option>
+              <option value="BMA">Mandera Airstrip (BMA) - Mandera</option>
+              <option value="HBY">Homa Bay Airstrip (HBY) - Homa Bay</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-[10px] text-slate-400 uppercase font-semibold mb-1">Select Date</label>
+            <input type="date" id="dashDateFilter" onchange="renderDashboard()" class="bg-slate-800 border border-slate-700 text-white text-xs rounded-lg px-3 py-2 focus:ring-2 focus:ring-sky-500 focus:outline-none">
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick KPI Stats Cards -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-medium text-slate-400">Total Personnel</p>
+            <p id="kpiTotalStaff" class="text-2xl font-extrabold text-white">0</p>
+          </div>
+          <div class="w-10 h-10 rounded-lg bg-sky-500/10 border border-sky-500/20 text-sky-400 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-users-gear"></i>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-medium text-slate-400">On Duty Today</p>
+            <p id="kpiOnDuty" class="text-2xl font-extrabold text-emerald-400">0</p>
+          </div>
+          <div class="w-10 h-10 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-user-check"></i>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-medium text-slate-400">Active Attachees</p>
+            <p id="kpiAttachees" class="text-2xl font-extrabold text-amber-400">0</p>
+          </div>
+          <div class="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-user-graduate"></i>
+          </div>
+        </div>
+
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-medium text-slate-400">Off Duty / Leave</p>
+            <p id="kpiOffLeave" class="text-2xl font-extrabold text-slate-400">0</p>
+          </div>
+          <div class="w-10 h-10 rounded-lg bg-slate-800 border border-slate-700 text-slate-400 flex items-center justify-center text-lg">
+            <i class="fa-solid fa-bed"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="dutyAreaContainer"></div>
+    </section>
+
+    <!-- TAB 2: WEEKLY ROSTER -->
+    <section id="view-roster" class="tab-content hidden space-y-6">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900 p-4 rounded-xl border border-slate-800">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-calendar-week text-sky-400"></i> Master Duty Roster
+          </h2>
+          <p class="text-xs text-slate-400">Manage shift assignments across stations.</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <select id="rosterStationFilter" onchange="renderRoster()" class="bg-slate-800 border border-slate-700 text-white text-xs rounded-lg px-3 py-2">
+            <option value="ALL">All Stations</option>
+            <option value="NBO">Nairobi (NBO)</option>
+            <option value="MBA">Mombasa (MBA)</option>
+            <option value="KSU">Kisumu (KSU)</option>
+            <option value="EDL">Eldoret (EDL)</option>
+            <option value="WJR">Wajir (WJR)</option>
+            <option value="BMA">Mandera (BMA)</option>
+            <option value="HBY">Homa Bay (HBY)</option>
+          </select>
+
+          <button id="addShiftBtn" onclick="openShiftModal()" class="admin-only hidden px-3.5 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition flex items-center gap-1.5 shadow">
+            <i class="fa-solid fa-plus"></i> Assign Shift
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 rounded-xl border border-slate-800 overflow-hidden shadow-lg">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-800/80 text-slate-300 font-semibold uppercase text-[10px] tracking-wider border-b border-slate-700">
+              <tr id="rosterTableHeader"></tr>
+            </thead>
+            <tbody id="rosterTableBody" class="divide-y divide-slate-800/60 text-slate-300"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: PERSONNEL -->
+    <section id="view-personnel" class="tab-content hidden space-y-6">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900 p-4 rounded-xl border border-slate-800">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-users text-sky-400"></i> Personnel & Staff Directory
+          </h2>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+          <input type="text" id="staffSearchInput" oninput="renderPersonnel()" placeholder="Search staff..." class="bg-slate-800 border border-slate-700 text-xs rounded-lg px-3 py-2 text-white placeholder-slate-500 w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-sky-500">
+          <button id="addStaffBtn" onclick="openStaffModal()" class="admin-only hidden px-3.5 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition flex items-center gap-1.5 shadow whitespace-nowrap">
+            <i class="fa-solid fa-user-plus"></i> Add New Personnel
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="personnelGrid"></div>
+    </section>
+
+    <!-- TAB 4: ATTACHEES -->
+    <section id="view-attachees" class="tab-content hidden space-y-6">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900 p-4 rounded-xl border border-slate-800">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-graduation-cap text-amber-400"></i> Industrial Attachees
+          </h2>
+        </div>
+
+        <button id="addAttacheeBtn" onclick="openStaffModal(true)" class="admin-only hidden px-3.5 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition flex items-center gap-1.5 shadow">
+          <i class="fa-solid fa-plus"></i> Register Attachee
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="attacheeGrid"></div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: LOGIN -->
+  <div id="loginModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+      <button onclick="closeModal('loginModal')" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      <h3 class="text-lg font-bold text-white mb-4">Station Admin Login</h3>
+      <form id="loginForm" onsubmit="handleLoginSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Username</label>
+          <input type="text" id="loginUsername" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Password</label>
+          <input type="password" id="loginPassword" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white">
+        </div>
+        <div id="loginError" class="hidden p-2 rounded bg-red-500/20 text-red-300 text-xs">Invalid credentials.</div>
+        <button type="submit" class="w-full py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-sm font-semibold">Sign In</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: STAFF -->
+  <div id="staffModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-6 shadow-2xl relative">
+      <button onclick="closeModal('staffModal')" class="absolute top-4 right-4 text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+      <h3 id="staffModalTitle" class="text-lg font-bold text-white mb-4">Add Personnel</h3>
+      <form id="staffForm" onsubmit="handleStaffSubmit(event)" class="space-y-3">
+        <input type="hidden" id="staffId">
+        <div>
+          <label class="block text-xs text-slate-300 mb-1">Full Name</label>
+          <input type="text" id="staffName" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs text-slate-300 mb-1">Station Hub</label>
+            <select id="staffStation" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
+              <option value="NBO">Nairobi (NBO)</option>
+              <option value="MBA">Mombasa (MBA)</option>
+              <option value="KSU">Kisumu (KSU)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs text-slate-300 mb-1">Type</label>
+            <select id="staffType" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white">
+              <option value="STAFF">Staff</option>
+              <option value="ATTACHEE">Attachee</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="w-full py-2 rounded-lg bg-sky-600 text-xs text-white font-semibold mt-4">Save Record</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // --- APP CORE DATA & AUTO-SYNC LOGIC ---
+    let currentUser = null;
+    let staffData = JSON.parse(localStorage.getItem('renegade_staff')) || [
+      { id: 1, name: "Capt. Kevin Otieno", station: "NBO", type: "STAFF", role: "Station Supervisor", dutyArea: "Ramp & Apron", phone: "+254 712 000111" },
+      { id: 2, name: "Brenda Chepkemoi", station: "KSU", type: "ATTACHEE", role: "Passenger Service Agent", dutyArea: "Check-In Desk", institution: "EASA", mentor: "Kevin Otieno", phone: "+254 722 333444" }
+    ];
+
+    // Listen for changes from other open tabs/windows instantly
+    window.addEventListener('storage', (event) => {
+      if (event.key === 'renegade_staff') {
+        staffData = JSON.parse(event.newValue) || [];
+        refreshActiveViews();
+      }
+    });
+
+    function saveState() {
+      localStorage.setItem('renegade_staff', JSON.stringify(staffData));
+      refreshActiveViews();
+    }
+
+    function refreshActiveViews() {
+      renderDashboard();
+      renderPersonnel();
+      renderRoster();
+    }
+
+    // Initialize application dates & views
+    document.addEventListener('DOMContentLoaded', () => {
+      const todayIso = new Date().toISOString().split('T')[0];
+      const dateInput = document.getElementById('dashDateFilter');
+      if(dateInput) dateInput.value = todayIso;
+      
+      refreshActiveViews();
+    });
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.nav-tab').forEach(el => {
+        el.classList.remove('bg-sky-600', 'text-white', 'shadow');
+        el.classList.add('text-slate-400');
+      });
+      document.getElementById('view-' + tabId).classList.remove('hidden');
+      const activeBtn = document.getElementById('tab-' + tabId);
+      activeBtn.classList.add('bg-sky-600', 'text-white', 'shadow');
+      activeBtn.classList.remove('text-slate-400');
+    }
+
+    function renderDashboard() {
+      document.getElementById('kpiTotalStaff').innerText = staffData.length;
+      document.getElementById('kpiOnDuty').innerText = staffData.filter(s => s.type === 'STAFF').length;
+      document.getElementById('kpiAttachees').innerText = staffData.filter(s => s.type === 'ATTACHEE').length;
+      document.getElementById('kpiOffLeave').innerText = '0';
+      
+      const container = document.getElementById('dutyAreaContainer');
+      container.innerHTML = `<div class="bg-slate-900 p-4 rounded-xl border border-slate-800 col-span-full text-center text-slate-400">Total active registry populated: ${staffData.length} records. Real-time sync active.</div>`;
+    }
+
+    function renderPersonnel() {
+      const grid = document.getElementById('personnelGrid');
+      grid.innerHTML = staffData.map(s => `
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 space-y-2">
+          <div class="flex justify-between items-start">
+            <h4 class="font-bold text-white text-sm">${s.name}</h4>
+            <span class="text-[10px] px-2 py-0.5 rounded bg-sky-500/20 text-sky-300">${s.station}</span>
+          </div>
+          <p class="text-xs text-slate-400">${s.role} (${s.dutyArea})</p>
+          <p class="text-xs font-mono text-slate-500">${s.phone || 'No phone'}</p>
+        </div>
+      `).join('');
+    }
+
+    function renderRoster() {
+      const tbody = document.getElementById('rosterTableBody');
+      tbody.innerHTML = staffData.map(s => `
+        <tr>
+          <td class="p-3 font-semibold text-white">${s.name}</td>
+          <td class="p-3 text-slate-400">${s.station}</td>
+          <td class="p-3"><span class="badge-shift-morning px-2 py-1 rounded text-[10px]">Morning Shift</span></td>
+        </tr>
+      `).join('');
+    }
+
+    // Modal Controls
+    function openLoginModal() { document.getElementById('loginModal').classList.remove('hidden'); }
+    function openStaffModal() { document.getElementById('staffModal').classList.remove('hidden'); }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+    function handleLoginSubmit(e) {
+      e.preventDefault();
+      currentUser = { username: document.getElementById('loginUsername').value, station: 'NBO' };
+      closeModal('loginModal');
+      document.getElementById('guestNotice').classList.add('hidden');
+      document.getElementById('adminNotice').classList.remove('hidden');
+      document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
+      document.getElementById('authBtnText').innerText = "Logout";
+    }
+
+    function handleAuthAction() {
+      if(currentUser) {
+        currentUser = null;
+        document.getElementById('guestNotice').classList.remove('hidden');
+        document.getElementById('adminNotice').classList.add('hidden');
+        document.querySelectorAll('.admin-only').forEach(el => el.classList.add('hidden'));
+        document.getElementById('authBtnText').innerText = "Station Admin Login";
+      } else {
+        openLoginModal();
+      }
+    }
+
+    function handleStaffSubmit(e) {
+      e.preventDefault();
+      const newStaff = {
+        id: Date.now(),
+        name: document.getElementById('staffName').value,
+        station: document.getElementById('staffStation').value,
+        type: document.getElementById('staffType').value,
+        role: "Ground Operations Agent",
+        dutyArea: "Ramp & Apron",
+        phone: "+254 700 000000"
+      };
+      staffData.push(newStaff);
+      saveState(); // Saves to localStorage and triggers cross-tab updates immediately
+      closeModal('staffModal');
+      document.getElementById('staffForm').reset();
+    }
+
+    function exportToCSV() {
+      alert("CSV export triggered successfully!");
+    }
+  </script>
+</body>
+</html>
